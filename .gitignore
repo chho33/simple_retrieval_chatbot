@@ -1,0 +1,13 @@
+__pycache__
+models/*
+test.py
+*.pyc
+*.swp
+*.swo
+.python-version
+*.txt
+*.csv
+*.bin
+*.log
+*.tfrecords
+*.npy
