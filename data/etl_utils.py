@@ -1,7 +1,10 @@
 import tensorflow as tf
 import os
 import csv
+import array
 import numpy as np
+import pandas as pd
+from sklearn.utils import shuffle
 from flags import FLAGS
 
 TRAIN_PATH = os.path.join(FLAGS.input_dir, "train.csv")
@@ -137,3 +140,29 @@ def write_vocabulary(vocab_processor, outfile):
       word =  vocab_processor.vocabulary_._reverse_mapping[id]
       vocabfile.write(word + "\n")
   print("Saved vocabulary to {}".format(outfile))
+
+def shuffle_data(filename):
+    df = pd.read_csv(filename)
+    df = shuffle(df)
+    df.to_csv(filename,index=False)
+
+# get smaller pretrain vec
+def shrink_pretrain_vectors(filename, vocab):
+    """
+    Load pretrain evectors from a .txt file.
+    Optionally limit the vocabulary to save memory. `vocab` should be a set.
+    """
+    with open(vocab, 'r') as f:
+        vocab = f.read().splitlines()
+    dct = {}
+    with open(filename, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            tokens = line.split(" ")
+            word = tokens[0]
+            entries = (' ').join(tokens[1:])
+            if not vocab or word in vocab:
+                dct[word] = entries
+        num_vectors = len(dct)
+    with open(os.path.join(FLAGS.input_dir,'fasttext.%sd.txt'%num_vectors),'w') as f:
+        for k,v in dct.items():
+            f.write('%s %s'%(k,v))

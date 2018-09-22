@@ -1,16 +1,17 @@
 import tensorflow as tf
-import glob
 import re
 import pandas as pd
 import os
 dirname = os.path.dirname(os.path.abspath(__file__))
-f = glob.glob(os.path.join(dirname,'data/fasttext.*.txt'))[0]
-vocab_size = re.search('\d+',f).group(0)
 
 # Data path
-tf.flags.DEFINE_string("training_data_path", os.path.join(dirname,'data/train.tfrecords'), "path of training data")
-tf.flags.DEFINE_string("valid_data_path", os.path.join(dirname,'data/validation.tfrecords'), "path of validation data")
+tf.flags.DEFINE_string("input_dir", os.path.join(dirname,"data"), "Directory containing input data files 'train.tfrecords' and 'validation.tfrecords'")
+tf.flags.DEFINE_string("training_data_path", os.path.join(tf.flags.FLAGS.input_dir,'train.tfrecords'), "path of training data")
+tf.flags.DEFINE_string("valid_data_path", os.path.join(tf.flags.FLAGS.input_dir,'validation.tfrecords'), "path of validation data")
+tf.flags.DEFINE_string("vocab_path", os.path.join(tf.flags.FLAGS.input_dir,'vocabulary.txt'), "Path to vocabulary.txt file")
 
+with open(tf.flags.FLAGS.vocab_path,'r') as f:
+    vocab_size = len([row for row in f.readlines()]) 
 # Model Parameters
 tf.flags.DEFINE_integer(
   "vocab_size",
@@ -25,19 +26,21 @@ tf.flags.DEFINE_integer("max_context_len", 80, "Truncate contexts to this length
 tf.flags.DEFINE_integer("max_utterance_len", 55, "Truncate utterance to this length")
 
 # Pre-trained embeddings
-tf.flags.DEFINE_string("pretrain_path", 'data/fasttext.250057d.txt', "Path to pre-trained pretrain vectors")
+pretrain_path = os.path.join(tf.flags.FLAGS.input_dir,'fasttext.%sd.txt'%(vocab_size-2))
+if not os.path.exists(pretrain_path):
+    from data.etl_utils import shrink_pretrain_vectors
+    shrink_pretrain_vectors(os.path.join(tf.flags.FLAGS.input_dir,'fasttext.250057d.txt'),os.path.join(tf.flags.FLAGS.input_dir,'vocabulary.txt'))
+tf.flags.DEFINE_string("pretrain_path", pretrain_path, "Path to pre-trained pretrain vectors")
 #tf.flags.DEFINE_string("pretrain_path", None, "Path to pre-trained pretrain vectors")
-tf.flags.DEFINE_string("vocab_path", os.path.join(dirname,'data/vocabulary.txt'), "Path to vocabulary.txt file")
 
 # Training Parameters
-tf.flags.DEFINE_integer("train_steps",5000, "Training steps.")
+tf.flags.DEFINE_integer("train_steps",50000, "Training steps.")
 tf.flags.DEFINE_float("learning_rate", 0.001, "Learning rate")
 tf.flags.DEFINE_integer("batch_size", 64, "Batch size during training")
 tf.flags.DEFINE_integer("eval_batch_size", 16, "Batch size during evaluation")
 tf.flags.DEFINE_string("optimizer", "Adam", "Optimizer Name (Adam, Adagrad, etc)")
 
 # Training Config
-tf.flags.DEFINE_string("input_dir", os.path.join(dirname,"data"), "Directory containing input data files 'train.tfrecords' and 'validation.tfrecords'")
 tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models") , "Directory to store model checkpoints (defaults to ./runs)")
 tf.flags.DEFINE_integer("loglevel", 20, "Tensorflow log level")
 tf.flags.DEFINE_integer("num_epochs", None, "Number of training Epochs. Defaults to indefinite.")
