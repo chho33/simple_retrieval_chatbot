@@ -2,6 +2,7 @@ import tensorflow as tf
 import re
 import pandas as pd
 import os
+from datetime import datetime
 dirname = os.path.dirname(os.path.abspath(__file__))
 
 # Data path
@@ -41,7 +42,7 @@ tf.flags.DEFINE_integer("eval_batch_size", 16, "Batch size during evaluation")
 tf.flags.DEFINE_string("optimizer", "Adam", "Optimizer Name (Adam, Adagrad, etc)")
 
 # Training Config
-tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models") , "Directory to store model checkpoints (defaults to ./runs)")
+tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models/%s"%datetime.now().strftime('%s')) , "Directory to store model checkpoints (defaults to ./runs)")
 tf.flags.DEFINE_integer("loglevel", 20, "Tensorflow log level")
 tf.flags.DEFINE_integer("num_epochs", None, "Number of training Epochs. Defaults to indefinite.")
 tf.flags.DEFINE_integer("eval_every", 2000, "Evaluate after this many train steps")

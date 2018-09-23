@@ -45,8 +45,8 @@ def main(argv=None):
         input_fn=get_eval_inputs,
         steps=200,
         exporters=exporter,
-        start_delay_secs=10,  # Start evaluating after 10 sec.
-        throttle_secs=20  # Evaluate only every 30 sec
+        start_delay_secs=1000,  # Start evaluating after 10 sec.
+        throttle_secs=2000  # Evaluate only every 30 sec
     )
     tf.estimator.train_and_evaluate(model_estimator, train_spec, eval_spec)
 

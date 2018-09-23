@@ -133,13 +133,17 @@ def get_embeddings(params=FLAGS):
         vocab_array, vocab_dict = load_vocab(params.vocab_path)
         pretrain_vectors, pretrain_dict = load_pretrain_vectors(params.pretrain_path, vocab=set(vocab_array))
         initializer = build_initial_embedding_matrix(vocab_dict, pretrain_dict, pretrain_vectors, params.embedding_dim)
+        return tf.get_variable(
+           "word_embeddings",
+           initializer=initializer)
     else:
-      tf.logging.info("No pretrain_vec path specificed, starting with random embeddings.")
-      initializer = tf.random_uniform_initializer(-0.25, 0.25)
+        tf.logging.info("No pretrain_vec path specificed, starting with random embeddings.")
+        initializer = tf.random_uniform_initializer(-0.25, 0.25)
 
-    return tf.get_variable(
-      "word_embeddings",
-      initializer=initializer)
+        return tf.get_variable(
+           "word_embeddings",
+           shape=[params.vocab_size, params.embedding_dim],
+           initializer=initializer)
 
 
 # save and load matrix
