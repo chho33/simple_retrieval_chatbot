@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.estimator.canned import metric_keys
 from flags import FLAGS
 import array
 import numpy as np
@@ -71,6 +72,7 @@ def get_params():
         "max_utterance_len",
         "optimizer",
         "rnn_dim",
+        "last_rnn_dim",
         "vocab_size",
         "pretrain_path",
         "vocab_path"
@@ -86,6 +88,7 @@ def get_params():
         max_utterance_len=FLAGS.max_utterance_len,
         pretrain_path=FLAGS.pretrain_path,
         vocab_path=FLAGS.vocab_path,
+        last_rnn_dim=FLAGS.last_rnn_dim,
         rnn_dim=FLAGS.rnn_dim)
 
 def get_feature_columns(mode):
@@ -144,6 +147,26 @@ def get_embeddings(params=FLAGS):
            "word_embeddings",
            shape=[params.vocab_size, params.embedding_dim],
            initializer=initializer)
+
+def compare_fn(best_eval_result, current_eval_result, default_key = metric_keys.MetricKeys.LOSS):
+    '''
+    default_key can be: [recall_at_1 | recall_at_2 | recall_at_5 | metric_keys.MetricKeys.LOSS]
+    '''
+    print('********* best_eval_result: %s **********'%best_eval_result[default_key])
+    print('********* current_eval_result: %s **********'%current_eval_result[default_key])
+    print('### metric:%s ###'%default_key)
+    if not best_eval_result or default_key not in best_eval_result:
+      raise ValueError(
+          'best_eval_result cannot be empty or no loss is found in it.')
+
+    if not current_eval_result or default_key not in current_eval_result:
+      raise ValueError(
+          'current_eval_result cannot be empty or no loss is found in it.')
+
+    if 'loss' in default_key.lower():
+        return best_eval_result[default_key] > current_eval_result[default_key]
+    else:
+        return best_eval_result[default_key] < current_eval_result[default_key]
 
 
 # save and load matrix

@@ -20,11 +20,17 @@ tf.flags.DEFINE_integer(
   "The size of the vocabulary. Only change this if you changed the preprocessing")
 ## glove = 100, fasttext = 300
 tf.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of the embeddings")
-tf.flags.DEFINE_integer("rnn_dim", 128, "Dimensionality of the RNN cell")
+tf.flags.DEFINE_string("rnn_dim", '200,100,100,200', "Dimensionality of the RNN cell")
+last_rnn_dim = int(tf.flags.FLAGS.rnn_dim.split(',')[-1])
+tf.flags.DEFINE_integer("last_rnn_dim", last_rnn_dim, "Dimensionality of the RNN cell")
 #tf.flags.DEFINE_integer("max_context_len", 160, "Truncate contexts to this length")
 #tf.flags.DEFINE_integer("max_utterance_len", 80, "Truncate utterance to this length")
 tf.flags.DEFINE_integer("max_context_len", 80, "Truncate contexts to this length")
 tf.flags.DEFINE_integer("max_utterance_len", 55, "Truncate utterance to this length")
+# for rnn dropout
+tf.app.flags.DEFINE_float('input_keep_prob', '1.0', 'step input dropout of saving model')
+tf.app.flags.DEFINE_float('output_keep_prob', '1.0', 'step output dropout of saving model')
+tf.app.flags.DEFINE_float('state_keep_prob', '1.0', 'step state dropout of saving model')
 
 # Pre-trained embeddings
 pretrain_path = os.path.join(tf.flags.FLAGS.input_dir,'fasttext.%sd.txt'%(vocab_size-2))
@@ -35,7 +41,7 @@ tf.flags.DEFINE_string("pretrain_path", pretrain_path, "Path to pre-trained pret
 #tf.flags.DEFINE_string("pretrain_path", None, "Path to pre-trained pretrain vectors")
 
 # Training Parameters
-tf.flags.DEFINE_integer("train_steps",50000, "Training steps.")
+tf.flags.DEFINE_integer("train_steps",300000, "Training steps.")
 tf.flags.DEFINE_float("learning_rate", 0.001, "Learning rate")
 tf.flags.DEFINE_integer("batch_size", 64, "Batch size during training")
 tf.flags.DEFINE_integer("eval_batch_size", 16, "Batch size during evaluation")
@@ -43,6 +49,7 @@ tf.flags.DEFINE_string("optimizer", "Adam", "Optimizer Name (Adam, Adagrad, etc)
 
 # Training Config
 tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models/%s"%datetime.now().strftime('%s')) , "Directory to store model checkpoints (defaults to ./runs)")
+#tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models/%s"%'1537709884') , "Directory to store model checkpoints (defaults to ./runs)")
 tf.flags.DEFINE_integer("loglevel", 20, "Tensorflow log level")
 tf.flags.DEFINE_integer("num_epochs", None, "Number of training Epochs. Defaults to indefinite.")
 tf.flags.DEFINE_integer("eval_every", 2000, "Evaluate after this many train steps")

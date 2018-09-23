@@ -10,7 +10,7 @@ utt = np.load('data/utterances.npy')
 
 with open('result/%s.txt'%(datetime.now().strftime('%s')),'a') as f:
     for i,p in enumerate(pred):
-        result = np.matmul(p.reshape(1,1,FLAGS.rnn_dim),utt)
+        result = np.matmul(p.reshape(1,1,FLAGS.last_rnn_dim),utt)
         ix = np.argmax(result)
         print(predictions_txt[i],' ======> ',utterances_txt[ix])
         f.write('%s\t%s\n'%(predictions_txt[i],utterances_txt[ix]))

@@ -4,7 +4,7 @@ import tensorflow as tf
 #from tensorflow.contrib.learn import MetricSpec
 from flags import FLAGS
 import functools
-from utils import get_embeddings,get_params,get_feature_columns,get_id_feature,\
+from utils import get_embeddings,get_params,get_feature_columns,get_id_feature,compare_fn,\
                   PREDICT,\
                   EVAL,\
                   TRAIN,\
@@ -32,21 +32,23 @@ def main(argv=None):
         max_steps=FLAGS.train_steps)
 
     serving_feature_spec = tf.feature_column.make_parse_example_spec(get_feature_columns(EVAL))
-    serving_input_receiver_fn = (
-      tf.estimator.export.build_parsing_serving_input_receiver_fn(serving_feature_spec))
+    serving_input_receiver_fn =\
+      tf.estimator.export.build_parsing_serving_input_receiver_fn(serving_feature_spec)
 
+    compare = functools.partial(compare_fn,default_key='recall_at_5')
     exporter = tf.estimator.BestExporter(
           name="best_exporter",
           serving_input_receiver_fn=serving_input_receiver_fn,
+          compare_fn=compare,
           exports_to_keep=3)
 
 
     eval_spec = tf.estimator.EvalSpec(
         input_fn=get_eval_inputs,
-        steps=200,
+        steps=300,
         exporters=exporter,
-        start_delay_secs=1000,  # Start evaluating after 10 sec.
-        throttle_secs=2000  # Evaluate only every 30 sec
+        start_delay_secs=30,  # Start evaluating after 10 sec.
+        throttle_secs=300  # Evaluate only every 30 sec
     )
     tf.estimator.train_and_evaluate(model_estimator, train_spec, eval_spec)
 
@@ -157,8 +159,9 @@ def model_fn(features, labels, mode, params=FLAGS):
         probs = tf.sigmoid(logits)
 
     # Setup the estimator according to the phase (Train, eval, predict)
-    loss = None
+    loss = None 
     train_op = None
+    export_outputs = None
     eval_metric_ops = {}
     # Loss will only be tracked during training or evaluation.
     if mode in (TRAIN, EVAL):
@@ -182,10 +185,14 @@ def model_fn(features, labels, mode, params=FLAGS):
             #eval_metric_ops["recall_at_%d" % k] = MetricSpec(metric_fn=functools.partial(
             #tf.contrib.metrics.streaming_sparse_recall_at_k,
             #k=k))
+    elif mode == PREDICT:
+        export_outputs = {
+          'prediction': tf.estimator.export.PredictOutput({'scores': probs})}
 
     return tf.estimator.EstimatorSpec(
         mode=mode,
         predictions=probs,
+        export_outputs=export_outputs, 
         loss=loss,
         train_op=train_op,
         eval_metric_ops=eval_metric_ops
@@ -232,12 +239,22 @@ def architecture(
   
     with tf.variable_scope("rnn") as vs:
         # We use an LSTM Cell
-        cell = tf.nn.rnn_cell.LSTMCell(
-            params.rnn_dim,
-            forget_bias=2.0,
-            use_peepholes=True,
-            state_is_tuple=True)
-    
+        #cell = tf.nn.rnn_cell.LSTMCell(
+        #             params.rnn_dim,
+        #             forget_bias=2.0,
+        #             use_peepholes=True)
+
+        rnn_dims = params.rnn_dim.split(',')
+        cell = [ tf.nn.rnn_cell.LSTMCell(
+                     int(rnn_dim),
+                     forget_bias=2.0,
+                     use_peepholes=True) for rnn_dim in rnn_dims]
+        cell = tf.nn.rnn_cell.MultiRNNCell(cell) 
+        cell = tf.nn.rnn_cell.DropoutWrapper(
+            cell,
+            input_keep_prob=FLAGS.input_keep_prob,
+            output_keep_prob=FLAGS.output_keep_prob,
+            state_keep_prob=FLAGS.state_keep_prob)
         # Run the utterance and context through the RNN
         #context_len = tf.Print(context_len,[context_len],"context_len: ")
         #utterance_len = tf.Print(utterance_len, [utterance_len], 'utterance_len: ')
@@ -252,6 +269,8 @@ def architecture(
             tmp_concat,
             tmp_concat_len,
             dtype=tf.float32)
+        if isinstance(rnn_states,list) or isinstance(rnn_states,tuple):
+            rnn_states = rnn_states[0]
         #context_embedded:  Tensor("embed_context:0", shape=(64, 160, 300), dtype=float32)
         #utterance_embedded:  Tensor("embed_utterance:0", shape=(64, 160, 300), dtype=float32)
         #tf.concat([context_embedded, utterance_embedded]:  Tensor("concat:0", shape=(128, 160, 300), dtype=float32)
@@ -263,7 +282,7 @@ def architecture(
   
     with tf.variable_scope("prediction") as vs:
         M = tf.get_variable("M",
-          shape=[params.rnn_dim, params.rnn_dim],
+          shape=[FLAGS.last_rnn_dim, FLAGS.last_rnn_dim],
           initializer=tf.truncated_normal_initializer())
     
         # "Predict" a  response: c * M
@@ -338,7 +357,7 @@ def get_inputs_fn(mode,path=None):
         reader=tf.TFRecordReader,
         randomize_input=randomize_input,
         num_epochs=FLAGS.num_epochs,
-        queue_capacity=200000 + batch_size * 10,
+        queue_capacity=400000 + batch_size * 10,
         name="read_batch_features_{}".format(mode))
 
     if mode == TRAIN:
