@@ -22,6 +22,8 @@ VALIDATION_CSV = os.path.abspath(os.path.join(FLAGS.input_dir, "validation.csv")
 PREDICTION_CSV = os.path.abspath(os.path.join(FLAGS.input_dir, "test.csv"))
 UTT_CSV = os.path.abspath(os.path.join(FLAGS.input_dir, "utterances.csv"))
 
+SPECIAL_TAGS_COUNT = 2
+
 def load_vocab(filename):
     vocab = None
     with open(filename) as f:
@@ -75,6 +77,7 @@ def get_params():
         "last_rnn_dim",
         "vocab_size",
         "pretrain_path",
+        "pretrain_trainable",
         "vocab_path"
       ])
     return HParams(
@@ -87,6 +90,7 @@ def get_params():
         max_context_len=FLAGS.max_context_len,
         max_utterance_len=FLAGS.max_utterance_len,
         pretrain_path=FLAGS.pretrain_path,
+        pretrain_trainable=FLAGS.pretrain_trainable,
         vocab_path=FLAGS.vocab_path,
         last_rnn_dim=FLAGS.last_rnn_dim,
         rnn_dim=FLAGS.rnn_dim)
@@ -131,22 +135,31 @@ def get_id_feature(features, key, len_key, max_len):
     return ids, ids_len
 
 def get_embeddings(params=FLAGS):
+    vocab_array, vocab_dict = load_vocab(params.vocab_path)
+    pretrain_vectors, pretrain_dict = load_pretrain_vectors(params.pretrain_path, vocab=set(vocab_array))
     if params.pretrain_path and params.vocab_path:
         tf.logging.info("Loading pretrain embeddings...")
-        vocab_array, vocab_dict = load_vocab(params.vocab_path)
-        pretrain_vectors, pretrain_dict = load_pretrain_vectors(params.pretrain_path, vocab=set(vocab_array))
-        initializer = build_initial_embedding_matrix(vocab_dict, pretrain_dict, pretrain_vectors, params.embedding_dim)
-        return tf.get_variable(
-           "word_embeddings",
-           initializer=initializer)
+        special_tags = np.random.uniform(-0.25, 0.25, (SPECIAL_TAGS_COUNT, params.embedding_dim)).astype("float32")
+        special_tags = tf.get_variable("special_tag",
+                                  initializer=special_tags,
+                                  trainable=True)
+        pretrain_vectors = tf.get_variable("word_embeddings",
+                                       initializer=pretrain_vectors,
+                                       trainable=params.pretrain_trainable)
+        print('pretrain_vec: ',pretrain_vectors.shape)
+        #initializer = build_initial_embedding_matrix(vocab_dict, pretrain_dict, pretrain_vectors, params.embedding_dim)
     else:
         tf.logging.info("No pretrain_vec path specificed, starting with random embeddings.")
-        initializer = tf.random_uniform_initializer(-0.25, 0.25)
-
-        return tf.get_variable(
-           "word_embeddings",
-           shape=[params.vocab_size, params.embedding_dim],
-           initializer=initializer)
+        special_tags = np.random.uniform(-0.25, 0.25, (SPECIAL_TAGS_COUNT, params.embedding_dim)).astype("float32")
+        special_tags = tf.get_variable("special_tag",
+                                  initializer=special_tags,
+                                  trainable=True)
+        pretrain_vectors = np.random.uniform(-0.25, 0.25, (len(pretrain_dict), params.embedding_dim)).astype("float32")
+        pretrain_vectors = tf.get_variable("word_embeddings",
+                                       initializer=pretrain_vectors,
+                                       trainable=params.pretrain_trainable)
+    pretrain_vectors = tf.concat([special_tags,pretrain_vectors],0)
+    return pretrain_vectors
 
 def compare_fn(best_eval_result, current_eval_result, default_key = metric_keys.MetricKeys.LOSS):
     '''

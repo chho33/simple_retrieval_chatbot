@@ -260,7 +260,7 @@ def architecture(
         #utterance_len = tf.Print(utterance_len, [utterance_len], 'utterance_len: ')
         if mode != PREDICT:
             tmp_concat = tf.concat([context_embedded, utterance_embedded],0)
-            tmp_concat_len = sequence_length=tf.concat([context_len, utterance_len],0)
+            tmp_concat_len = tf.concat([context_len, utterance_len],0)
         else:
             tmp_concat = context_embedded
             tmp_concat_len = context_len

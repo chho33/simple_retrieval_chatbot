@@ -38,18 +38,19 @@ if not os.path.exists(pretrain_path):
     from data.etl_utils import shrink_pretrain_vectors
     shrink_pretrain_vectors(os.path.join(tf.flags.FLAGS.input_dir,'fasttext.250057d.txt'),os.path.join(tf.flags.FLAGS.input_dir,'vocabulary.txt'))
 tf.flags.DEFINE_string("pretrain_path", pretrain_path, "Path to pre-trained pretrain vectors")
+tf.flags.DEFINE_boolean("pretrain_trainable", False, "Path to pre-trained pretrain vectors")
 #tf.flags.DEFINE_string("pretrain_path", None, "Path to pre-trained pretrain vectors")
 
 # Training Parameters
-tf.flags.DEFINE_integer("train_steps",300000, "Training steps.")
+tf.flags.DEFINE_integer("train_steps",400000, "Training steps.")
 tf.flags.DEFINE_float("learning_rate", 0.001, "Learning rate")
 tf.flags.DEFINE_integer("batch_size", 64, "Batch size during training")
 tf.flags.DEFINE_integer("eval_batch_size", 16, "Batch size during evaluation")
 tf.flags.DEFINE_string("optimizer", "Adam", "Optimizer Name (Adam, Adagrad, etc)")
 
 # Training Config
-tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models/%s"%datetime.now().strftime('%s')) , "Directory to store model checkpoints (defaults to ./runs)")
-#tf.flags.DEFINE_string("model_dir",os.path.join(dirname,"models/%s"%'1537709884') , "Directory to store model checkpoints (defaults to ./runs)")
+#tf.flags.DEFINE_string("model_dir","/data/models/retrieval/%s"%datetime.now().strftime('%s') , "Directory to store model checkpoints (defaults to ./runs)")
+tf.flags.DEFINE_string("model_dir","/data/models/retrieval/%s"%'1537709884', "Directory to store model checkpoints (defaults to ./runs)")
 tf.flags.DEFINE_integer("loglevel", 20, "Tensorflow log level")
 tf.flags.DEFINE_integer("num_epochs", None, "Number of training Epochs. Defaults to indefinite.")
 tf.flags.DEFINE_integer("eval_every", 2000, "Evaluate after this many train steps")
