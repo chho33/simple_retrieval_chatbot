@@ -45,10 +45,10 @@ def main(argv=None):
 
     eval_spec = tf.estimator.EvalSpec(
         input_fn=get_eval_inputs,
-        steps=300,
+        steps=500,
         exporters=exporter,
-        start_delay_secs=30,  # Start evaluating after 10 sec.
-        throttle_secs=300  # Evaluate only every 30 sec
+        start_delay_secs=60,  # Start evaluating after 10 sec.
+        throttle_secs=1000  # Evaluate only every 30 sec
     )
     tf.estimator.train_and_evaluate(model_estimator, train_spec, eval_spec)
 
@@ -227,6 +227,7 @@ def architecture(
     embeddings_W = get_embeddings(params)
   
     #context = tf.Print(context,[context], '############ context ##########: ')
+    #utterance = tf.Print(utterance,[utterance],"utterance: ")
     # Embed the context and the utterance
     context_embedded = tf.nn.embedding_lookup(
         embeddings_W, context, name="embed_context")
@@ -287,8 +288,11 @@ def architecture(
     
         # "Predict" a  response: c * M
         generated_response = tf.matmul(encoding_context, M)
+        print('matmul_weight: ',params.matmul_weight)
+        if mode == PREDICT and not params.matmul_weight:
+            return generated_response
         generated_response = tf.expand_dims(generated_response, 2)
-        if mode == PREDICT:
+        if mode == PREDICT and params.matmul_weight:
             return generated_response
         encoding_utterance = tf.expand_dims(encoding_utterance, 2)
     
@@ -309,7 +313,11 @@ def get_train_op_fn(loss, params):
     Returns:
         Training Op
     """
-    optimizer = tf.train.AdamOptimizer(params.learning_rate)
+    global_step = tf.train.get_global_step()
+    learning_rate = tf.train.exponential_decay(params.learning_rate, global_step, FLAGS.decay_steps, FLAGS.decay_rate, staircase=True)
+    #learning_rate = tf.Print(learning_rate,[learning_rate],"learning_rate: ")
+    #optimizer = tf.train.AdamOptimizer(params.learning_rate)
+    optimizer = tf.train.AdamOptimizer(learning_rate)
     train_op = optimizer.minimize(
         loss=loss,
         global_step=tf.train.get_global_step())
@@ -399,4 +407,3 @@ def get_eval_inputs():
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.DEBUG)
     tf.app.run()
-

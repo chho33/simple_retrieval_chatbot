@@ -4,8 +4,10 @@ import pandas as pd
 import os
 from datetime import datetime
 dirname = os.path.dirname(os.path.abspath(__file__))
+dirname = "/home/jojotenya/Documents/retrieval"
 
 # Data path
+#tf.flags.DEFINE_string("input_dir", os.path.join(dirname,"data"), "Directory containing input data files 'train.tfrecords' and 'validation.tfrecords'")
 tf.flags.DEFINE_string("input_dir", os.path.join(dirname,"data"), "Directory containing input data files 'train.tfrecords' and 'validation.tfrecords'")
 tf.flags.DEFINE_string("training_data_path", os.path.join(tf.flags.FLAGS.input_dir,'train.tfrecords'), "path of training data")
 tf.flags.DEFINE_string("valid_data_path", os.path.join(tf.flags.FLAGS.input_dir,'validation.tfrecords'), "path of validation data")
@@ -38,19 +40,22 @@ if not os.path.exists(pretrain_path):
     from data.etl_utils import shrink_pretrain_vectors
     shrink_pretrain_vectors(os.path.join(tf.flags.FLAGS.input_dir,'fasttext.250057d.txt'),os.path.join(tf.flags.FLAGS.input_dir,'vocabulary.txt'))
 tf.flags.DEFINE_string("pretrain_path", pretrain_path, "Path to pre-trained pretrain vectors")
-tf.flags.DEFINE_boolean("pretrain_trainable", False, "Path to pre-trained pretrain vectors")
+tf.flags.DEFINE_boolean("pretrain_trainable", True, "Path to pre-trained pretrain vectors")
 #tf.flags.DEFINE_string("pretrain_path", None, "Path to pre-trained pretrain vectors")
 
 # Training Parameters
-tf.flags.DEFINE_integer("train_steps",400000, "Training steps.")
+tf.flags.DEFINE_integer("train_steps",1200000, "Training steps.")
 tf.flags.DEFINE_float("learning_rate", 0.001, "Learning rate")
+tf.flags.DEFINE_float("decay_steps", 10000, "Decay learning rate every n steps")
+tf.flags.DEFINE_float("decay_rate", 0.975, "Decay learning rate every n steps")
 tf.flags.DEFINE_integer("batch_size", 64, "Batch size during training")
 tf.flags.DEFINE_integer("eval_batch_size", 16, "Batch size during evaluation")
 tf.flags.DEFINE_string("optimizer", "Adam", "Optimizer Name (Adam, Adagrad, etc)")
 
 # Training Config
 #tf.flags.DEFINE_string("model_dir","/data/models/retrieval/%s"%datetime.now().strftime('%s') , "Directory to store model checkpoints (defaults to ./runs)")
-tf.flags.DEFINE_string("model_dir","/data/models/retrieval/%s"%'1537709884', "Directory to store model checkpoints (defaults to ./runs)")
+#tf.flags.DEFINE_string("model_dir","/data/models/retrieval/%s"%'1538760039', "Directory to store model checkpoints (defaults to ./runs)")
+tf.flags.DEFINE_string("model_dir","/data/models/retrieval/%s"%'test1', "Directory to store model checkpoints (defaults to ./runs)")
 tf.flags.DEFINE_integer("loglevel", 20, "Tensorflow log level")
 tf.flags.DEFINE_integer("num_epochs", None, "Number of training Epochs. Defaults to indefinite.")
 tf.flags.DEFINE_integer("eval_every", 2000, "Evaluate after this many train steps")
@@ -74,6 +79,7 @@ tf.flags.DEFINE_integer("utt_size", train_size, "size of all utterances")
 tf.flags.DEFINE_integer("train_size", val_size, "size of train corpus")
 tf.flags.DEFINE_integer("val_size", val_size, "size of validation corpus")
 tf.flags.DEFINE_integer("predict_size", predict_size, "size of prediction corpus")
+tf.flags.DEFINE_boolean("matmul_weight", True, "if infer output matmul or not")
 
 # Etl
 tf.flags.DEFINE_integer(
